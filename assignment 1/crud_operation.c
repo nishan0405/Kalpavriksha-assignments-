@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-const char FILE_NAME[] = "users.txt"; 
+const char FILE_NAME[] = "users.txt";
 
 struct User {
     int id;
@@ -19,6 +19,13 @@ struct User getUserInput() {
     printf("Enter Age: ");
     scanf("%d", &u.age);
     return u;
+}
+
+int getUserId(const char *prompt) {
+    int id;
+    printf("%s", prompt);
+    scanf("%d", &id);
+    return id;
 }
 
 void createUser() {
@@ -58,8 +65,7 @@ int updateUser() {
         return -1;
     }
 
-    printf("Enter ID to update: ");
-    scanf("%d", &id);
+    id = getUserId("Enter ID to update: ");
 
     while (fscanf(fp, "%d %s %d", &u.id, u.name, &u.age) == 3) {
         if (u.id == id) {
@@ -89,8 +95,7 @@ int deleteUser() {
         return -1;
     }
 
-    printf("Enter ID to delete: ");
-    scanf("%d", &id);
+    id = getUserId("Enter ID to delete: ");
 
     while (fscanf(fp, "%d %s %d", &u.id, u.name, &u.age) == 3) {
         if (u.id == id) {
@@ -108,18 +113,21 @@ int deleteUser() {
     return found;
 }
 
-void ensureFileExists() {
+int ensureFileExists() {
     FILE *fp = fopen(FILE_NAME, "a");
     if (fp == NULL) {
-        printf("Error creating file.\n");
-        exit(1);
+        return 0;
     }
     fclose(fp);
+    return 1;
 }
 
 int main() {
     int choice, status;
-    ensureFileExists();
+    if (!ensureFileExists()) {
+        printf("Error creating file.\n");
+        return 1;
+    }
 
     while (1) {
         printf("\nUSER CRUD SYSTEM : \n");
