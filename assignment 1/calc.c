@@ -7,34 +7,71 @@
 #define BUF_SIZE 1024
 
 static int precedence(char op) {
-    if (op == '+' || op == '-') return 1;
-    if (op == '*' || op == '/') return 2;
+    if (op == '+' || op == '-') {
+        return 1;
+    }
+    if (op == '*' || op == '/') {
+        return 2;
+    }
     return 0;
 }
 
-static int apply_op(int a, int b, char op, int *errorFlag, int *result) {
+static int apply_op(int a, int b, char op, int *errorFlag) {
+    int result = 0;
+
     switch (op) {
-        case '+': *result = a + b; return 1;
-        case '-': *result = a - b; return 1;
-        case '*': *result = a * b; return 1;
-        case '/':
-            if (b == 0) { *errorFlag = 1; return 0; }
-            *result = a / b;
-            return 1;
-        default:
-            *errorFlag = 1;
-            return 0;
+        case '+': {
+            result = a + b;
+            break;
+        }
+        case '-': {
+            result = a - b;
+            break;
+        }
+        case '*': {
+            result = a * b;
+            break;
+        }
+        case '/': {
+            if (b == 0) {
+                *errorFlag = 1;  /* Division by zero */
+                return -1;
+            }
+            result = a / b;
+            break;
+        }
+        default: {
+            *errorFlag = 2;  /* Invalid operator */
+            return -1;
+        }
     }
+
+    return result;
 }
 
 static int applyTopOperator(IntStack *nums, CharStack *ops, int *errorFlag) {
     char op;
     int right, left, res;
-    if (!charStackPop(ops, &op)) return 0;          
-    if (!intStackPop(nums, &right)) { *errorFlag = 1; return 0; } 
-    if (!intStackPop(nums, &left))  { *errorFlag = 1; return 0; } 
-    if (!apply_op(left, right, op, errorFlag, &res)) return 0;
-    if (!intStackPush(nums, res)) { *errorFlag = 1; return 0; } 
+
+    if (!charStackPop(ops, &op)) { 
+        return 0;
+    }
+    if (!intStackPop(nums, &right)) {
+        *errorFlag = 1;
+        return 0;
+    } 
+    if (!intStackPop(nums, &left)) {
+        *errorFlag = 1;
+        return 0; 
+    } 
+    res = apply_op(left, right, op, errorFlag);
+    if (*errorFlag != 0) {
+        return 0;
+    }
+    if (!intStackPush(nums, res)) { 
+        *errorFlag = 1;
+        return 0;
+    } 
     return 1;
 }
 
@@ -60,20 +97,35 @@ int evaluate_expression(const char *expr, int *outResult, int *errorFlag) {
             int digits = 0;
             while (i < n && isdigit((unsigned char)expr[i])) {
                 val = val * 10 + (expr[i] - '0');
-                i++; digits++;
-                if (val > INT_MAX) { *errorFlag = 1; return 0; }
+                i++;
+                digits++;
+                if (val > INT_MAX) {
+                    *errorFlag = 1;
+                    return 0;
+                }
             }
-            if (!intStackPush(&nums, (int)val)) { *errorFlag = 1; return 0; }
+            if (!intStackPush(&nums, (int)val)) {
+                *errorFlag = 1;
+                return 0;
+            }
             continue;
         }
 
         if (ch == '+' || ch == '-' || ch == '*' || ch == '/') {
             char topOp;
             while (!charStackIsEmpty(&ops) && charStackPeek(&ops, &topOp) && precedence(topOp) >= precedence(ch)) {
-                if (!applyTopOperator(&nums, &ops, errorFlag)) return 0;
-                if (*errorFlag) return 0;
+                if (!applyTopOperator(&nums, &ops, errorFlag)) {
+                    *errorFlag = 3;  
+                    return 0;
+                }
+                if (*errorFlag != 0) {
+                    return 0;
+                }
             }
-            if (!charStackPush(&ops, ch)) { *errorFlag = 1; return 0; }
+            if (!charStackPush(&ops, ch)) {
+                *errorFlag = 1;
+                return 0;
+            }
             i++;
             continue;
         }
@@ -83,12 +135,22 @@ int evaluate_expression(const char *expr, int *outResult, int *errorFlag) {
     }
 
     while (!charStackIsEmpty(&ops)) {
-        if (!applyTopOperator(&nums, &ops, errorFlag)) return 0;
-        if (*errorFlag) return 0;
+        if (!applyTopOperator(&nums, &ops, errorFlag)) {
+            return 0;
+        }
+        if (*errorFlag) {
+            return 0;
+        }
     }
 
-    if (nums.top != 0) { *errorFlag = 1; return 0; }
-    if (!intStackPop(&nums, outResult)) { *errorFlag = 1; return 0; }
+    if (nums.top != 0) {
+        *errorFlag = 1; 
+        return 0;
+    }
+    if (!intStackPop(&nums, outResult)) { 
+        *errorFlag = 1; 
+        return 0; 
+    }
 
     return 1;
 }
@@ -107,10 +169,18 @@ int main(void) {
     int errorFlag = 0;
     int result = 0;
     if (!evaluate_expression(buf, &result, &errorFlag)) {
-        if (errorFlag) {
-            fprintf(stderr, "Error: Invalid expression or arithmetic error (maybe division by zero).\n");
-        } else {
-            fprintf(stderr, "Error: Could not evaluate expression.\n");
+        switch (errorFlag) {
+            case 1:
+                fprintf(stderr, "Error: Division by zero occurred in the expression.\n");
+                break;
+            case 2:
+                fprintf(stderr, "Error: Expression contains invalid characters.\n");
+                break;
+            case 3:
+                fprintf(stderr, "Error: Malformed expression (e.g., missing operand or operator).\n");
+                break;
+            default:
+                fprintf(stderr, "Error: Unknown evaluation error.\n");
         }
         return EXIT_FAILURE;
     }
@@ -118,5 +188,3 @@ int main(void) {
     printf("Result: %d\n", result);
     return EXIT_SUCCESS;
 }
-
-
