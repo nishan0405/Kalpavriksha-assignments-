@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define FILE_NAME "users.txt"
+const char FILE_NAME[] = "users.txt"; 
 
 struct User {
     int id;
@@ -10,21 +10,24 @@ struct User {
     int age;
 };
 
-void createUser() {
+struct User getUserInput() {
     struct User u;
-    FILE *fp = fopen(FILE_NAME, "a");
-    if (fp == NULL) {
-        printf("Error opening file.\n");
-        return;
-    }
-
     printf("Enter ID: ");
     scanf("%d", &u.id);
     printf("Enter Name: ");
     scanf("%s", u.name);
     printf("Enter Age: ");
     scanf("%d", &u.age);
+    return u;
+}
 
+void createUser() {
+    struct User u = getUserInput();
+    FILE *fp = fopen(FILE_NAME, "a");
+    if (fp == NULL) {
+        printf("Error opening file.\n");
+        return;
+    }
     fprintf(fp, "%d %s %d\n", u.id, u.name, u.age);
     fclose(fp);
     printf("User added successfully.\n");
@@ -45,14 +48,14 @@ void readUsers() {
     fclose(fp);
 }
 
-void updateUser() {
+int updateUser() {
     struct User u;
     int id, found = 0;
     FILE *fp = fopen(FILE_NAME, "r");
     FILE *temp = fopen("temp.txt", "w");
     if (fp == NULL || temp == NULL) {
         printf("Error opening file.\n");
-        return;
+        return -1;
     }
 
     printf("Enter ID to update: ");
@@ -61,10 +64,9 @@ void updateUser() {
     while (fscanf(fp, "%d %s %d", &u.id, u.name, &u.age) == 3) {
         if (u.id == id) {
             found = 1;
-            printf("Enter new Name: ");
-            scanf("%s", u.name);
-            printf("Enter new Age: ");
-            scanf("%d", &u.age);
+            printf("Enter new details:\n");
+            struct User newU = getUserInput();
+            u = newU;
         }
         fprintf(temp, "%d %s %d\n", u.id, u.name, u.age);
     }
@@ -74,20 +76,17 @@ void updateUser() {
     remove(FILE_NAME);
     rename("temp.txt", FILE_NAME);
 
-    if (found)
-        printf("User updated successfully.\n");
-    else
-        printf("User with ID %d not found.\n", id);
+    return found;
 }
 
-void deleteUser() {
+int deleteUser() {
     struct User u;
     int id, found = 0;
     FILE *fp = fopen(FILE_NAME, "r");
     FILE *temp = fopen("temp.txt", "w");
     if (fp == NULL || temp == NULL) {
         printf("Error opening file.\n");
-        return;
+        return -1;
     }
 
     printf("Enter ID to delete: ");
@@ -106,10 +105,7 @@ void deleteUser() {
     remove(FILE_NAME);
     rename("temp.txt", FILE_NAME);
 
-    if (found)
-        printf("User deleted successfully.\n");
-    else
-        printf("User with ID %d not found.\n", id);
+    return found;
 }
 
 void ensureFileExists() {
@@ -122,7 +118,7 @@ void ensureFileExists() {
 }
 
 int main() {
-    int choice;
+    int choice, status;
     ensureFileExists();
 
     while (1) {
@@ -136,12 +132,34 @@ int main() {
         scanf("%d", &choice);
 
         switch (choice) {
-            case 1: createUser(); break;
-            case 2: readUsers(); break;
-            case 3: updateUser(); break;
-            case 4: deleteUser(); break;
-            case 5: exit(0);
-            default: printf("Invalid choice. Try again.\n");
+            case 1:
+                createUser();
+                break;
+            case 2:
+                readUsers();
+                break;
+            case 3:
+                status = updateUser();
+                if (status == 1)
+                    printf("User updated successfully.\n");
+                else if (status == 0)
+                    printf("User not found.\n");
+                else
+                    printf("Error updating user.\n");
+                break;
+            case 4:
+                status = deleteUser();
+                if (status == 1)
+                    printf("User deleted successfully.\n");
+                else if (status == 0)
+                    printf("User not found.\n");
+                else
+                    printf("Error deleting user.\n");
+                break;
+            case 5:
+                exit(0);
+            default:
+                printf("Invalid choice. Try again.\n");
         }
     }
 
