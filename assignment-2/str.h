@@ -1,19 +1,20 @@
-
 #ifndef STR_H
 #define STR_H
 
 #include <stdio.h>
 
+#define MAX_SUBJECTS 10
+#define MAX_GRADE_LEVELS 5
 
 struct Student {
     int roll;
     char name[50];
-    float marks[3];
+    float marks[MAX_SUBJECTS];
+    int numSubjects;
     float total;
     float avg;
     char grade;
 };
-
 
 float calculateTotal(struct Student s);
 float calculateAverage(struct Student s);
@@ -21,40 +22,41 @@ char assignGrade(float avg);
 void printStars(char grade);
 void printRollNumbers(int i, int n);
 
-
 float calculateTotal(struct Student s) {
-    return s.marks[0] + s.marks[1] + s.marks[2];
+    float total = 0;
+    for (int i = 0; i < s.numSubjects; i++) {
+        total += s.marks[i];
+    }
+    return total;
 }
 
 float calculateAverage(struct Student s) {
-    return (s.marks[0] + s.marks[1] + s.marks[2]) / 3.0;
+    if (s.numSubjects == 0) return 0;
+    return s.total / s.numSubjects;
 }
 
 char assignGrade(float avg) {
-    if (avg >= 85)
-        return 'A';
-    else if (avg >= 70)
-        return 'B';
-    else if (avg >= 50)
-        return 'C';
-    else if (avg >= 35)
-        return 'D';
-    else
-        return 'F';
+    const float thresholds[MAX_GRADE_LEVELS] = {85, 70, 50, 35, 0};
+    const char grades[MAX_GRADE_LEVELS] = {'A', 'B', 'C', 'D', 'F'};
+
+    for (int i = 0; i < MAX_GRADE_LEVELS; i++) {
+        if (avg >= thresholds[i])
+            return grades[i];
+    }
+    return 'F';
 }
 
 void printStars(char grade) {
-    int stars = 0;
-    switch (grade) {
-        case 'A': stars = 5; break;
-        case 'B': stars = 4; break;
-        case 'C': stars = 3; break;
-        case 'D': stars = 2; break;
-        default: stars = 0; break;
-    }
+    const char gradeLevels[] = {'A', 'B', 'C', 'D', 'F'};
+    const int starsMap[] = {5, 4, 3, 2, 0};
 
-    for (int i = 0; i < stars; i++)
-        printf("*");
+    for (int i = 0; i < sizeof(gradeLevels); i++) {
+        if (grade == gradeLevels[i]) {
+            for (int j = 0; j < starsMap[i]; j++)
+                printf("*");
+            return;
+        }
+    }
 }
 
 void printRollNumbers(int i, int n) {
