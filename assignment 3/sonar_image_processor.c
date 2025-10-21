@@ -10,7 +10,7 @@ void random_matrix(int *matrix, int n, int max_intensity);
 void print_matrix(int *matrix, int n);
 void rotate(int *matrix, int n);
 void smoothing(int *matrix, int n);
-int calculate_average(int *matrix, int n, int row, int col);
+int calculate_average(int *matrix, int n, int row, int col, int *original);
 
 int main()
 {
@@ -22,6 +22,7 @@ int main()
         printf("The entered value %d is invalid\n", n);
         return 0;
     }
+
     int *matrix = (int *)malloc(n * n * sizeof(int));
     if (matrix == NULL)
     {
@@ -39,13 +40,12 @@ int main()
     print_matrix(matrix, n);
 
     smoothing(matrix, n);
-    printf("Matrix after Applying 3×3 Smoothing Filter:\n");
+    printf("Matrix after Applying 3x3 Smoothing Filter:\n");
     print_matrix(matrix, n);
 
     free(matrix);
     return 0;
 }
-
 
 void random_matrix(int *matrix, int n, int max_intensity)
 {
@@ -70,6 +70,7 @@ void print_matrix(int *matrix, int n)
         printf("\n");
     }
 }
+
 void rotate(int *matrix, int n)
 {
     // Transpose
@@ -95,7 +96,7 @@ void rotate(int *matrix, int n)
     }
 }
 
-int calculate_average(int *matrix, int n, int row, int col)
+int calculate_average(int *matrix, int n, int row, int col, int *original)
 {
     int sum = 0, count = 0;
 
@@ -105,7 +106,7 @@ int calculate_average(int *matrix, int n, int row, int col)
         {
             if (x >= 0 && x < n && y >= 0 && y < n)
             {
-                sum += *(matrix + x * n + y);
+                sum += *(original + x * n + y);
                 count++;
             }
         }
@@ -116,16 +117,18 @@ int calculate_average(int *matrix, int n, int row, int col)
 
 void smoothing(int *matrix, int n)
 {
+    int original[n * n];
+
+    for (int i = 0; i < n * n; i++)
+    {
+        original[i] = *(matrix + i);
+    }
+
     for (int row = 0; row < n; row++)
     {
         for (int col = 0; col < n; col++)
         {
-            int avg = calculate_average(matrix, n, row, col);
-            *(matrix + row * n + col) |= (avg << 16);
+            *(matrix + row * n + col) = calculate_average(matrix, n, row, col, original);
         }
-    }
-    for (int i = 0; i < n * n; i++)
-    {
-        *(matrix + i) = (*(matrix + i) >> 16);
     }
 }
