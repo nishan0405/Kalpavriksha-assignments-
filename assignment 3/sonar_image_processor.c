@@ -1,25 +1,35 @@
 #include <stdio.h>
-#include <string.h>
+#include <stdlib.h>
 #include <time.h>
 
-void random_matrix(int *matrix, int n);
+#define MIN_SIZE 2
+#define MAX_SIZE 10
+#define MAX_INTENSITY 256
+
+void random_matrix(int *matrix, int n, int max_intensity);
 void print_matrix(int *matrix, int n);
 void rotate(int *matrix, int n);
 void smoothing(int *matrix, int n);
+int calculate_average(int *matrix, int n, int row, int col);
 
 int main()
 {
     int n;
-    printf("Enter matrix size (2-10): ");
+    printf("Enter matrix size (%d–%d): ", MIN_SIZE, MAX_SIZE);
     scanf("%d", &n);
-    if (n < 2 || n > 10)
+    if (n < MIN_SIZE || n > MAX_SIZE)
     {
-        printf("The entered value %d is invalid", n);
+        printf("The entered value %d is invalid\n", n);
         return 0;
     }
+    int *matrix = (int *)malloc(n * n * sizeof(int));
+    if (matrix == NULL)
+    {
+        printf("Memory allocation failed!\n");
+        return 1;
+    }
 
-    int matrix[n * n];
-    random_matrix(matrix, n);
+    random_matrix(matrix, n, MAX_INTENSITY);
 
     printf("Original Randomly Generated Matrix:\n");
     print_matrix(matrix, n);
@@ -32,17 +42,19 @@ int main()
     printf("Matrix after Applying 3×3 Smoothing Filter:\n");
     print_matrix(matrix, n);
 
+    free(matrix);
     return 0;
 }
 
-void random_matrix(int *matrix, int n)
+
+void random_matrix(int *matrix, int n, int max_intensity)
 {
     srand(time(0));
     for (int row = 0; row < n; row++)
     {
         for (int col = 0; col < n; col++)
         {
-            *(matrix + row * n + col) = rand() % 256;
+            *(matrix + row * n + col) = rand() % max_intensity;
         }
     }
 }
@@ -58,7 +70,6 @@ void print_matrix(int *matrix, int n)
         printf("\n");
     }
 }
-
 void rotate(int *matrix, int n)
 {
     // Transpose
@@ -84,37 +95,37 @@ void rotate(int *matrix, int n)
     }
 }
 
-void smoothing(int *matrix, int n)
+int calculate_average(int *matrix, int n, int row, int col)
 {
-    int temp[n * n];
+    int sum = 0, count = 0;
 
-    // Copy matrix into temp
-    for (int row = 0; row < n; row++)
+    for (int x = row - 1; x <= row + 1; x++)
     {
-        for (int col = 0; col < n; col++)
+        for (int y = col - 1; y <= col + 1; y++)
         {
-            *(temp + row * n + col) = *(matrix + row * n + col);
+            if (x >= 0 && x < n && y >= 0 && y < n)
+            {
+                sum += *(matrix + x * n + y);
+                count++;
+            }
         }
     }
 
-    // Apply smoothing filter
+    return sum / count;
+}
+
+void smoothing(int *matrix, int n)
+{
     for (int row = 0; row < n; row++)
     {
         for (int col = 0; col < n; col++)
         {
-            int sum = 0, count = 0;
-            for (int x = row - 1; x <= row + 1; x++)
-            {
-                for (int y = col - 1; y <= col + 1; y++)
-                {
-                    if (x >= 0 && x < n && y >= 0 && y < n)
-                    {
-                        sum += *(temp + x * n + y);
-                        count++;
-                    }
-                }
-            }
-            *(matrix + row * n + col) = sum / count;
+            int avg = calculate_average(matrix, n, row, col);
+            *(matrix + row * n + col) |= (avg << 16);
         }
+    }
+    for (int i = 0; i < n * n; i++)
+    {
+        *(matrix + i) = (*(matrix + i) >> 16);
     }
 }
