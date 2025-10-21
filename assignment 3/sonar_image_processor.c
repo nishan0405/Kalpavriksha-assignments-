@@ -10,7 +10,7 @@ void random_matrix(int *matrix, int n, int max_intensity);
 void print_matrix(int *matrix, int n);
 void rotate(int *matrix, int n);
 void smoothing(int *matrix, int n);
-int calculate_average(int *matrix, int n, int row, int col, int *original);
+int calculate_average(int *matrix, int n, int row, int col);
 
 int main()
 {
@@ -96,7 +96,7 @@ void rotate(int *matrix, int n)
     }
 }
 
-int calculate_average(int *matrix, int n, int row, int col, int *original)
+int calculate_average(int *matrix, int n, int row, int col)
 {
     int sum = 0, count = 0;
 
@@ -106,29 +106,27 @@ int calculate_average(int *matrix, int n, int row, int col, int *original)
         {
             if (x >= 0 && x < n && y >= 0 && y < n)
             {
-                sum += *(original + x * n + y);
+                int val = *(matrix + x * n + y) & 0xFFFF;
+                sum += val;
                 count++;
             }
         }
     }
-
     return sum / count;
 }
-
 void smoothing(int *matrix, int n)
 {
-    int original[n * n];
-
-    for (int i = 0; i < n * n; i++)
-    {
-        original[i] = *(matrix + i);
-    }
-
     for (int row = 0; row < n; row++)
     {
         for (int col = 0; col < n; col++)
         {
-            *(matrix + row * n + col) = calculate_average(matrix, n, row, col, original);
+            int avg = calculate_average(matrix, n, row, col);
+            *(matrix + row * n + col) |= (avg << 16);
         }
+    }
+
+    for (int i = 0; i < n * n; i++)
+    {
+        *(matrix + i) = (*(matrix + i) >> 16) & 0xFFFF;
     }
 }
