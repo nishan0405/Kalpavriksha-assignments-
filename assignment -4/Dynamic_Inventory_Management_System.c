@@ -4,29 +4,47 @@
 #include "inventory_management.h"
 
 Product* inputProductDetails() {
-    Product *p = malloc(sizeof(Product));
-    if (!p) return NULL;
+    Product *newProduct = malloc(sizeof(Product));
+    if (!newProduct) return NULL;
 
-    printf("Enter Product ID: ");
-    scanf("%d", &p->id);
+    do {
+        printf("Enter Product ID (positive number): ");
+        scanf("%d", &newProduct->id);
+        if (newProduct->id <= 0)
+            printf("Invalid ID! Try again.\n");
+    } while (newProduct->id <= 0);
     getchar();
 
-    printf("Enter Product Name: ");
-    fgets(p->name, NAME_LEN, stdin);
-    p->name[strcspn(p->name, "\n")] = '\0';
+    do {
+        printf("Enter Product Name: ");
+        fgets(newProduct->name, NAME_LEN, stdin);
+        newProduct->name[strcspn(newProduct->name, "\n")] = '\0';
 
-    printf("Enter Product Price: ");
-    scanf("%f", &p->price);
+        if (strlen(newProduct->name) == 0)
+            printf("Name cannot be empty! Try again.\n");
 
-    printf("Enter Product Quantity: ");
-    scanf("%d", &p->quantity);
+    } while (strlen(newProduct->name) == 0);
 
-    return p;
+    do {
+        printf("Enter Product Price (>0): ");
+        scanf("%f", &newProduct->price);
+        if (newProduct->price <= 0)
+            printf("Invalid price! Try again.\n");
+    } while (newProduct->price <= 0);
+
+    do {
+        printf("Enter Product Quantity (>=0): ");
+        scanf("%d", &newProduct->quantity);
+        if (newProduct->quantity < 0)
+            printf("Invalid quantity! Try again.\n");
+    } while (newProduct->quantity < 0);
+
+    return newProduct;
 }
 
-void printProduct(const Product *p) {
+void printProduct(const Product *newProduct) {
     printf("Product ID: %d | Name: %s | Price: %.2f | Quantity: %d\n",
-           p->id, p->name, p->price, p->quantity);
+           newProduct->id, newProduct->name, newProduct->price, newProduct->quantity);
 }
 
 bool addProduct(Product **products, int *productCount) {
@@ -35,7 +53,6 @@ bool addProduct(Product **products, int *productCount) {
 
     (*productCount)++;
     *products = realloc(*products, (*productCount) * sizeof(Product));
-
     if (*products == NULL) {
         printf("Memory reallocation failed!\n");
         exit(1);
@@ -96,13 +113,16 @@ bool updateQuantity(Product *products, int productCount) {
     printf("Enter Product ID to update quantity: ");
     scanf("%d", &id);
 
-    Product *p = searchByID(products, productCount, id);
-    if (!p) return false;
+    Product *newProduct = searchByID(products, productCount, id);
+    if (!newProduct) return false;
 
     printf("Enter new Quantity: ");
     scanf("%d", &newQty);
-    p->quantity = newQty;
 
+    if (newQty < 0)
+        printf("Invalid quantity! Try again.\n");
+
+    newProduct->quantity = newQty;
     return true;
 }
 
@@ -152,18 +172,15 @@ int main() {
             case 1:
                 addProduct(&products, &productCount);
                 break;
-
             case 2:
                 viewProducts(products, productCount);
                 break;
-
             case 3:
                 if (updateQuantity(products, productCount))
                     printf("Quantity updated.\n");
                 else
                     printf("Product not found!\n");
                 break;
-
             case 4:
                 printf("Enter Product ID: ");
                 scanf("%d", &id);
@@ -172,7 +189,6 @@ int main() {
                 else
                     printf("Product not found!\n");
                 break;
-
             case 5:
                 printf("Enter product name: ");
                 fgets(name, NAME_LEN, stdin);
@@ -182,22 +198,19 @@ int main() {
                 else
                     printf("Product not found!\n");
                 break;
-
             case 6:
                 searchByPriceRange(products, productCount);
                 break;
-
             case 7:
                 if (deleteProduct(&products, &productCount))
                     printf("Product deleted.\n");
                 else
                     printf("Product not found!\n");
                 break;
-
             case 8:
                 free(products);
+                products = NULL;
                 return 0;
-
             default:
                 printf("Invalid choice!\n");
         }
