@@ -42,8 +42,10 @@ void ls_cmd();
 void cd_cmd(char *name);
 void pwd_cmd();
 void df_cmd();
+void free_file_tree(FileNode *node)
 void free_memory();
 FileNode* find_in_cwd(char *name);
 void print_prompt();
 
 #endif
+
