@@ -90,6 +90,22 @@ void handle_command(char *cmd) {
 }
 
 void mkdir_cmd(char *name) {
+     if (name == NULL || strlen(name) == 0) {
+        printf("Error: directory name cannot be empty.\n");
+        return;
+    }
+      while (*name == ' ') name++;
+    if (*name == '\0') {
+        printf("Error: directory name cannot be blank.\n");
+        return;
+    }
+
+    for (int i = 0; name[i]; i++) {
+        if (strchr("/\\:*?\"<>|", name[i])) {
+            printf("Error: directory name contains invalid characters.\n");
+            return;
+        }
+    }
     if (find_in_cwd(name)) {
         printf("Name already exists in current directory.\n");
         return;
@@ -154,7 +170,9 @@ void write_cmd(char *filename, char *data) {
         return;
     }
 
-    int needed_blocks = (strlen(data) + BLOCK_SIZE - 1) / BLOCK_SIZE;
+    int data_len = strlen(data);
+    int needed_blocks = (data_len + BLOCK_SIZE - 1) / BLOCK_SIZE;
+
     if (needed_blocks == 0)
         needed_blocks = 1;
 
@@ -171,40 +189,67 @@ void write_cmd(char *filename, char *data) {
     }
 
     for (int i = 0; i < node->blockCount; i++) {
-        FreeBlock *fb = (FreeBlock*)malloc(sizeof(FreeBlock));
-        fb->index = node->blocks[i];
+        int blk = node->blocks[i];
+
+        if (blk < 0 || blk >= NUM_BLOCKS)
+            continue;
+
+        FreeBlock *fb = malloc(sizeof(FreeBlock));
+        fb->index = blk;
         fb->next = NULL;
 
         if (!freeTail) {
             freeHead = freeTail = fb;
             fb->prev = NULL;
-        }
-        else {
+        } else {
             freeTail->next = fb;
             fb->prev = freeTail;
             freeTail = fb;
         }
+
+        node->blocks[i] = -1;
     }
 
-    node->blockCount = needed_blocks;
-    node->fileSize = strlen(data);
+    node->blockCount = 0;
+    node->fileSize = 0;
 
     for (int i = 0; i < needed_blocks; i++) {
-        FreeBlock *block = freeHead;
-        node->blocks[i] = block->index;
-        freeHead = block->next;
+        if (!freeHead) {
+            printf("Error: free list corrupted.\n");
+            return;
+        }
 
+        FreeBlock *block = freeHead;
+        int blk_index = block->index;
+
+        node->blocks[i] = blk_index;
+        node->blockCount++;
+
+        freeHead = block->next;
         if (freeHead)
             freeHead->prev = NULL;
-        if (block == freeTail)
+        else
             freeTail = NULL;
 
         free(block);
-        memcpy(disk[node->blocks[i]], data + i*BLOCK_SIZE, BLOCK_SIZE);
+
+        int offset = i * BLOCK_SIZE;
+        int to_copy = data_len - offset;
+
+        if (to_copy > BLOCK_SIZE)
+            to_copy = BLOCK_SIZE;
+
+        memcpy(disk[blk_index], data + offset, to_copy);
+
+        if (to_copy < BLOCK_SIZE)
+            memset(disk[blk_index] + to_copy, 0, BLOCK_SIZE - to_copy);
     }
+
+    node->fileSize = data_len;
 
     printf("Data written successfully (size=%d bytes).\n", node->fileSize);
 }
+
 
 void read_cmd(char *filename) {
     FileNode *node = find_in_cwd(filename);
@@ -272,70 +317,91 @@ void ls_cmd() {
     }
 
     FileNode *node = cwd->children;
-    int first = 1;
 
     do {
-        if (!first)
-            printf(" ");
-
         if (node->isDirectory)
-            printf("%s/", node->name);
+            printf("%s/\n", node->name);
         else
-            printf("%s", node->name);
+            printf("%s\n", node->name);
 
-        first = 0;
         node = node->next;
 
     } while (node != cwd->children);
-
-    printf("\n");
 }
+
 
 void cd_cmd(char *name) {
     if (cwd == NULL) {
         printf("Error: current directory is not set.\n");
         return;
-      }
+    }
+
     if (!strcmp(name, "..")) {
         if (cwd->parent) {
             cwd = cwd->parent;
-            if (cwd == root)
-                printf("Moved to /\n");
-            else
-                printf("Moved to /%s\n", cwd->name);
         }
-        return;
+    } else {
+        FileNode *node = find_in_cwd(name);
+        if (!node || !node->isDirectory) {
+            printf("Directory not found.\n");
+            return;
+        }
+        cwd = node;
     }
-
-    FileNode *node = find_in_cwd(name);
-    if (!node || !node->isDirectory) {
-        printf("Directory not found.\n");
-        return;
-    }
-
-    cwd = node;
-    if (cwd == root)
-        printf("Moved to /\n");
-    else
-        printf("Moved to /%s\n", cwd->name);
-}
-
-void pwd_cmd() {
     FileNode *node = cwd;
-    char paths[256] = "";
+    char path[512] = "";
 
     while (node && node != root) {
-        char temp[256]; 
-        sprintf(temp, "/%s%s", node->name, paths);
-        strcpy(paths, temp);
+        char temp[512];
+        int written = snprintf(temp, sizeof(temp), "/%s%s", node->name, path);
+
+        if (written <= 0 || written >= sizeof(temp)) {
+            printf("Path too long.\n");
+            return;
+        }
+
+        strcpy(path, temp);
         node = node->parent;
     }
 
-    if (strlen(paths) == 0)
-        strcpy(paths, "/");
+    if (strlen(path) == 0)
+        strcpy(path, "/");
 
-    printf("%s\n", paths);
+    printf("Moved to %s\n", path);
 }
+
+
+void pwd_cmd() {
+    FileNode *node = cwd;
+    char path[512] = "";
+
+    while (node && node != root) {
+        char temp[512];
+
+        int written = snprintf(
+            temp, sizeof(temp),
+            "/%s%s",
+            node->name,
+            path
+        );
+
+        if (written <= 0 || written >= sizeof(temp)) {
+            printf("Path too long to display safely.\n");
+            return;
+        }
+
+        strcpy(path, temp);
+
+        node = node->parent;
+    }
+
+    if (strlen(path) == 0) {
+        strcpy(path, "/");
+    }
+
+    printf("%s\n", path);
+}
+
 
 void rmdir_cmd(char *name) {
     FileNode *node = find_in_cwd(name);
@@ -398,10 +464,24 @@ FileNode* find_in_cwd(char *name) {
     return NULL;
 }
 
+void free_file_tree(FileNode *node) {
+    if (!node) return;
+    free_file_tree(node->children);
+    free_file_tree(node->next);
+    free(node);
+}
+
+
 void free_memory() {
+
     while (freeHead) {
         FreeBlock *tmp = freeHead;
         freeHead = freeHead->next;
         free(tmp);
     }
+    freeTail = NULL;
+    free_file_tree(root);   
+    root = NULL;
 }
+
+
