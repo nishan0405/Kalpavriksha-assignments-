@@ -516,7 +516,7 @@ void cd_cmd(char *name)
 
     while (node != NULL && node != root)
     {
-        char temp[512];
+        char temp[PATH_SIZE];
         int written = snprintf(temp, sizeof(temp), "/%s%s", node->name, path);
         if (written <= 0 || written >= (int)sizeof(temp))
         {
@@ -679,5 +679,6 @@ void free_memory(void)
     free_file_tree(root);
     root = NULL;
 }
+
 
 
