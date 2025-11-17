@@ -36,6 +36,7 @@ int getRoleValue(const char *roleStr);
 float calculatePerformanceIndex(const MyPlayer *player);
 bool isBatsmanOrAllRounder(int role);
 void initializeData();
+void printLayout();
 int binarySearchTeam(const char *teamName);
 void displayPlayersOfTeam(int teamId);
 int compareTeamByAverageStrikeRate(const void *a, const void *b);
@@ -43,6 +44,7 @@ void displayTeamsByAverageStrikeRate();
 int comparePlayerPerformanceDesc(const void *a, const void *b);
 void displayTopKPlayers(int teamId, int roleVal, int K);
 void displayAllPlayersOfRole(int roleVal);
+void printPlayerInfo(const MyPlayer *player);
 void mergeSort(void *base, int num, int size, int (*compar)(const void*, const void*));
 static void merge(void *base, int left, int mid, int right, int size, int (*compar)(const void*, const void*));
 
