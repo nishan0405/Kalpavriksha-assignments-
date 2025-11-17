@@ -7,6 +7,7 @@
 #include <stdbool.h>
 
 #define BLOCK_SIZE 512
+#define PATH_SIZE 512
 #define NUM_BLOCKS 1024
 #define MAX_NAME 50
 #define MAX_BLOCKS_PER_FILE 50
@@ -54,3 +55,4 @@ FileNode* find_in_cwd(char *name);
 void print_prompt(void);
 
 #endif
+
