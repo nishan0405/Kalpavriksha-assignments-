@@ -511,7 +511,7 @@ void cd_cmd(char *name)
     }
 
     FileNode *node = cwd;
-    char path[512];
+    char path[PATH_SIZE];
     path[0] = '\0';
 
     while (node != NULL && node != root)
@@ -679,4 +679,5 @@ void free_memory(void)
     free_file_tree(root);
     root = NULL;
 }
+
 
