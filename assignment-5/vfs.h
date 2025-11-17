@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
 #define BLOCK_SIZE 512
 #define NUM_BLOCKS 1024
@@ -12,13 +13,15 @@
 
 typedef struct FreeBlock {
     int index;
-    struct FreeBlock *prev, *next;
+    struct FreeBlock *prev;
+    struct FreeBlock *next;
 } FreeBlock;
 
 typedef struct FileNode {
-    int isDirectory;
+    int isDirectory; // boolean as int
     char name[MAX_NAME];
-    struct FileNode *next, *prev;
+    struct FileNode *next;
+    struct FileNode *prev;
     struct FileNode *parent;
     struct FileNode *children;
     int blockCount;
@@ -27,25 +30,27 @@ typedef struct FileNode {
 } FileNode;
 
 extern unsigned char disk[NUM_BLOCKS][BLOCK_SIZE];
-extern FreeBlock *freeHead, *freeTail;
-extern FileNode *root, *cwd;
+extern FreeBlock *freeHead;
+extern FreeBlock *freeTail;
+extern FileNode *root;
+extern FileNode *cwd;
 
-void init_disk();
+void init_disk(void);
 void handle_command(char *cmd);
 void mkdir_cmd(char *name);
 void create_cmd(char *name);
+int countFreeBlocks(void);
+void returnBlocksToFreeList(FileNode *file);
 void write_cmd(char *filename, char *data);
 void read_cmd(char *filename);
 void delete_cmd(char *filename);
 void rmdir_cmd(char *name);
-void ls_cmd();
+void ls_cmd(void);
 void cd_cmd(char *name);
-void pwd_cmd();
-void df_cmd();
-void free_file_tree(FileNode *node)
-void free_memory();
+void pwd_cmd(void);
+void df_cmd(void);
+void free_memory(void);
 FileNode* find_in_cwd(char *name);
-void print_prompt();
+void print_prompt(void);
 
 #endif
-
