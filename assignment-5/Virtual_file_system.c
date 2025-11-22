@@ -89,50 +89,64 @@ void init_disk(void)
 
 void handle_command(char *cmd)
 {
-    if (strncmp(cmd, "mkdir ", 6) == 0)
+    char *command = strtok(cmd, " ");
+    char *args = strtok(NULL, "");
+
+    if (command == NULL)
     {
-        mkdir_cmd(cmd + 6);
+        printf("No command entered.\n");
+        return;
     }
-    else if (strncmp(cmd, "create ", 7) == 0)
+
+    if (strcmp(command, "mkdir") == 0)
     {
-        create_cmd(cmd + 7);
+        mkdir_cmd(args);
     }
-    else if (strncmp(cmd, "write ", 6) == 0)
+    else if (strcmp(command, "create") == 0)
     {
-        char *p = strchr(cmd + 6, ' ');
-        if (p == NULL)
+        create_cmd(args);
+    }
+    else if (strcmp(command, "write") == 0)
+    {
+        if (args == NULL)
         {
             printf("Invalid write command.\n");
             return;
         }
-        *p = 0;
-        write_cmd(cmd + 6, p + 1);
+        char *filename = strtok(args, " ");
+        char *data = strtok(NULL, "");
+        if (filename == NULL || data == NULL)
+        {
+            printf("Invalid write command.\n");
+            return;
+        }
+        write_cmd(filename, data);
     }
-    else if (strncmp(cmd, "read ", 5) == 0)
+    else if (strcmp(command, "read") == 0)
     {
-        read_cmd(cmd + 5);
+        read_cmd(args);
     }
-    else if (strncmp(cmd, "delete ", 7) == 0)
+    else if (strcmp(command, "delete") == 0)
     {
-        delete_cmd(cmd + 7);
+        delete_cmd(args);
     }
-    else if (strncmp(cmd, "rmdir ", 6) == 0)
+    else if (strcmp(command, "rmdir") == 0)
     {
-        rmdir_cmd(cmd + 6);
+        rmdir_cmd(args);
     }
-    else if (strcmp(cmd, "ls") == 0)
+    else if (strcmp(command, "ls") == 0)
     {
         ls_cmd();
     }
-    else if (strncmp(cmd, "cd ", 3) == 0)
+    else if (strcmp(command, "cd") == 0)
     {
-        cd_cmd(cmd + 3);
+        cd_cmd(args);
     }
-    else if (strcmp(cmd, "pwd") == 0)
+    else if (strcmp(command, "pwd") == 0)
     {
         pwd_cmd();
     }
-    else if (strcmp(cmd, "df") == 0)
+    else if (strcmp(command, "df") == 0)
     {
         df_cmd();
     }
@@ -141,6 +155,7 @@ void handle_command(char *cmd)
         printf("Unknown command.\n");
     }
 }
+
 
 void mkdir_cmd(char *name)
 {
@@ -254,7 +269,6 @@ void create_cmd(char *name)
 
     printf("File '%s' created successfully.\n", name);
 }
-
 int countFreeBlocks(void)
 {
     int count = 0;
@@ -267,43 +281,86 @@ int countFreeBlocks(void)
     return count;
 }
 
-void returnBlocksToFreeList(FileNode *file)
-{
-    int i;
-    for (i = 0; i < file->blockCount; i++)
-    {
-        int blockIndex = file->blocks[i];
 
-        if (blockIndex < 0 || blockIndex >= NUM_BLOCKS)
-        {
-            continue;
-        }
+int append_write_data(FileNode *file, const char *data, int dataLength) {
+    int bytesUsedInLastBlock = 0;
+    int currentBlocksUsed = file->blockCount;
 
-        FreeBlock *newFreeBlock = (FreeBlock *)malloc(sizeof(FreeBlock));
-        if (newFreeBlock == NULL)
-        {
-            printf("Memory allocation failed while freeing blocks.\n");
-            return;
-        }
-        newFreeBlock->index = blockIndex;
-        newFreeBlock->next = NULL;
-
-        if (freeTail == NULL)
-        {
-            freeHead = newFreeBlock;
-            freeTail = newFreeBlock;
-            newFreeBlock->prev = NULL;
-        }
-        else
-        {
-            freeTail->next = newFreeBlock;
-            newFreeBlock->prev = freeTail;
-            freeTail = newFreeBlock;
-        }
-        file->blocks[i] = -1;
+    if (currentBlocksUsed > 0) {
+        bytesUsedInLastBlock = file->fileSize % BLOCK_SIZE;
+        if (bytesUsedInLastBlock == 0)
+            bytesUsedInLastBlock = BLOCK_SIZE;
     }
-    file->blockCount = 0;
-    file->fileSize = 0;
+
+    int totalRequiredBlocks = (bytesUsedInLastBlock + dataLength + BLOCK_SIZE - 1) / BLOCK_SIZE;
+    int freeBlocksAvailable = countFreeBlocks();
+
+    if (freeBlocksAvailable < totalRequiredBlocks - currentBlocksUsed) {
+        printf("Disk full. Cannot write data.\n");
+        return -1;
+    }
+
+    int bytesWritten = 0;
+
+    if (currentBlocksUsed > 0 && bytesUsedInLastBlock < BLOCK_SIZE) {
+        int lastBlockIndex = file->blocks[currentBlocksUsed - 1];
+        int spaceInLastBlock = BLOCK_SIZE - bytesUsedInLastBlock;
+
+        int extraSpace = 0;
+        if (spaceInLastBlock > 0 && data[0] != ' ') {
+            ((char *)disk[lastBlockIndex])[bytesUsedInLastBlock] = ' ';
+            bytesUsedInLastBlock++;
+            spaceInLastBlock--;
+            extraSpace = 1;
+        }
+
+        int bytesToCopy = (dataLength < spaceInLastBlock) ? dataLength : spaceInLastBlock;
+
+        strncpy((char *)(disk[lastBlockIndex] + bytesUsedInLastBlock), data, bytesToCopy);
+        bytesWritten += bytesToCopy;
+    }
+
+    for (int i = currentBlocksUsed; bytesWritten < dataLength; i++) {
+        if (freeHead == NULL) {
+            printf("Error: free list corrupted.\n");
+            return -1;
+        }
+
+        if (i >= MAX_BLOCKS_PER_FILE) {
+            printf("File block limit exceeded.\n");
+            return -1;
+        }
+
+        FreeBlock *block = freeHead;
+        int blockIndex = block->index;
+
+        file->blocks[i] = blockIndex;
+        file->blockCount++;
+
+        freeHead = block->next;
+        if (freeHead != NULL)
+            freeHead->prev = NULL;
+        else
+            freeTail = NULL;
+        free(block);
+
+        int bytesToCopy = dataLength - bytesWritten;
+        if (bytesToCopy > BLOCK_SIZE)
+            bytesToCopy = BLOCK_SIZE;
+
+        strncpy((char *)disk[blockIndex], data + bytesWritten, bytesToCopy);
+
+        if (bytesToCopy < BLOCK_SIZE) {
+            for (int j = bytesToCopy; j < BLOCK_SIZE; j++) {
+                disk[blockIndex][j] = 0;
+            }
+        }
+
+        bytesWritten += bytesToCopy;
+    }
+
+    file->fileSize += dataLength + (bytesWritten > 0 && data[0] != ' ' ? 1 : 0);
+    return 0;
 }
 
 void write_cmd(char *filename, char *data)
@@ -316,66 +373,17 @@ void write_cmd(char *filename, char *data)
     }
 
     int dataLength = (int)strlen(data);
-    int requiredBlocks = (dataLength + BLOCK_SIZE - 1) / BLOCK_SIZE;
-    if (requiredBlocks == 0)
+    if (dataLength == 0)
     {
-        requiredBlocks = 1;
-    }
-
-    int availableFreeBlocks = countFreeBlocks();
-    if (availableFreeBlocks < requiredBlocks)
-    {
-        printf("Disk full. Cannot write data.\n");
+        printf("Nothing to write.\n");
         return;
     }
-    returnBlocksToFreeList(file);
 
-    int i;
-    for (i = 0; i < requiredBlocks; i++)
-    {
-        if (freeHead == NULL)
-        {
-            printf("Error: free list corrupted.\n");
-            return;
-        }
-
-        FreeBlock *block = freeHead;
-        int blockIndex = block->index;
-
-        file->blocks[i] = blockIndex;
-        file->blockCount++;
-
-        freeHead = block->next;
-        if (freeHead != NULL)
-        {
-            freeHead->prev = NULL;
-        }
-        else
-        {
-            freeTail = NULL;
-        }
-
-        free(block);
-
-        int offset = i * BLOCK_SIZE;
-        int bytesToCopy = dataLength - offset;
-        if (bytesToCopy > BLOCK_SIZE)
-        {
-            bytesToCopy = BLOCK_SIZE;
-        }
-
-        memcpy(disk[blockIndex], data + offset, bytesToCopy);
-
-        if (bytesToCopy < BLOCK_SIZE)
-        {
-            memset(disk[blockIndex] + bytesToCopy, 0, BLOCK_SIZE - bytesToCopy);
-        }
+    if (append_write_data(file, data, dataLength) == 0) {
+        printf("Data written successfully (size=%d bytes).\n", file->fileSize);
     }
-
-    file->fileSize = dataLength;
-
-    printf("Data written successfully (size=%d bytes).\n", file->fileSize);
 }
+
 
 void read_cmd(char *filename)
 {
@@ -679,6 +687,5 @@ void free_memory(void)
     free_file_tree(root);
     root = NULL;
 }
-
 
 
