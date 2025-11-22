@@ -41,7 +41,7 @@ void handle_command(char *cmd);
 void mkdir_cmd(char *name);
 void create_cmd(char *name);
 int countFreeBlocks(void);
-void returnBlocksToFreeList(FileNode *file);
+int append_write_data(FileNode *file, const char *data, int dataLength);
 void write_cmd(char *filename, char *data);
 void read_cmd(char *filename);
 void delete_cmd(char *filename);
@@ -55,4 +55,3 @@ FileNode* find_in_cwd(char *name);
 void print_prompt(void);
 
 #endif
-
