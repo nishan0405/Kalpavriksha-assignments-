@@ -1,32 +1,38 @@
 #ifndef DATA_H
 #define DATA_H
+#include <stdbool.h>
 
 #define maxTeams 10
 #define maxPlayers 200
 #define maxNameLen 50
 
+typedef enum {
+    ROLE_BATSMAN = 1,
+    ROLE_BOWLER = 2,
+    ROLE_ALLROUNDER = 3
+} Role;
 
-typedef struct {
+typedef struct MyPlayer {
     int playerId;
     char playerName[maxNameLen];
     char teamName[maxNameLen];
-    int playerRole;
+    Role playerRole;
     int totalRuns;
     float battingAverage;
     float strikeRate;
     int wickets;
     float economyRate;
     float performanceIndex;
+    struct MyPlayer *next; 
 } MyPlayer;
-
 
 typedef struct {
     int teamId;
     char teamName[maxNameLen];
     int totalPlayers;
     float averageBattingStrikeRate;
+    MyPlayer *playersHead; 
 } Team;
-
 
 extern MyPlayer playerList[maxPlayers];
 extern Team teamList[maxTeams];
