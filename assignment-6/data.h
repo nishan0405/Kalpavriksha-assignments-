@@ -1,9 +1,7 @@
 #ifndef DATA_H
 #define DATA_H
-#include <stdbool.h>
-
-#define maxTeams 10
 #define maxPlayers 200
+#define maxTeams 10
 #define maxNameLen 50
 
 typedef enum {
@@ -23,7 +21,7 @@ typedef struct MyPlayer {
     int wickets;
     float economyRate;
     float performanceIndex;
-    struct MyPlayer *next; 
+    struct MyPlayer *next;  
 } MyPlayer;
 
 typedef struct {
@@ -31,7 +29,7 @@ typedef struct {
     char teamName[maxNameLen];
     int totalPlayers;
     float averageBattingStrikeRate;
-    MyPlayer *playersHead; 
+    MyPlayer *playersHead;  
 } Team;
 
 extern MyPlayer playerList[maxPlayers];
@@ -45,13 +43,13 @@ void initializeData();
 void printLayout();
 int binarySearchTeam(const char *teamName);
 void displayPlayersOfTeam(int teamId);
-int compareTeamByAverageStrikeRate(const void *a, const void *b);
 void displayTeamsByAverageStrikeRate();
-int comparePlayerPerformanceDesc(const void *a, const void *b);
-void displayTopKPlayers(int teamId, int roleVal, int K);
+void displayTopKPlayers(int teamId, int roleVal, int k);
 void displayAllPlayersOfRole(int roleVal);
 void printPlayerInfo(const MyPlayer *player);
-void mergeSort(void *base, int num, int size, int (*compar)(const void*, const void*));
-static void merge(void *base, int left, int mid, int right, int size, int (*compar)(const void*, const void*));
+int compareTeamByAverageStrikeRate(const void *a, const void *b);
+int comparePlayerPerformanceDesc(const void *a, const void *b);
+void merge(void *array, int leftIndex, int middleIndex, int rightIndex, int elementSize,int (*compare)(const void*, const void*));
+void mergeSort(void *array, int totalElements, int elementSize,int (*compare)(const void*, const void*));
 
 #endif
